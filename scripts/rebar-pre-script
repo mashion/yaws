@@ -1,0 +1,76 @@
+#!/bin/sh
+YAWS_DIR=`pwd`
+cd src
+YAWS_VSN=${VSN-1.89}
+YAWS_VARDIR=${VARDIR-$YAWS_DIR/var}
+YAWS_ETCDIR=${ETCDIR-$YAWS_DIR/etc}
+YAWS_LOCALINSTALL=${LOCALINSTALL-true}
+ERL_BIN=`which erl`
+ERL_BIN_DIR=${ERL_BIN%/erl}
+YAWS_ERLBINDIR=${ERLBINDIR-$ERL_BIN_DIR}
+ERL_BIN=$YAWS_ERLBINDIR/erl
+WERL_BIN=$YAWS_ERLBINDIR/werl
+
+CHARSET=${DEFAULT_CHARSET-""}
+if [ ! -f mime_types.erl ]; then
+  echo ${CHARSET} > charset.def
+  erlc +debug_info mime_type_c.erl -o ../ebin
+  erl -noshell -pa ../ebin -s mime_type_c compile
+  erlc +debug_info mime_types.erl -o ../ebin
+fi
+
+case `uname -s` in
+  Linux|CYGWIN*)
+    sed -i"" -e "s/%VSN%/${YAWS_VSN}/" yaws.app.src
+    sed -i"" -e "s/{modules,\[%MODULES%\]},//" yaws.app.src
+    ;;
+  Darwin|FreeBSD)
+    sed -i "" -e "s/%VSN%/${YAWS_VSN}/" yaws.app.src
+    sed -i "" -e "s/{modules,\[%MODULES%\]},//" yaws.app.src
+    ;;
+esac
+test -f yaws_configure.hrl || echo "%% dummy file" > yaws_configure.hrl
+test -f yaws_generated.erl || cat yaws_generated.template | \
+	../scripts/Subst %VSN% ${YAWS_VSN} | \
+	../scripts/Subst %VARDIR% ${YAWS_VARDIR} | \
+	../scripts/Subst %localinstall% ${YAWS_LOCALINSTALL} | \
+	../scripts/Subst %ETCDIR% ${YAWS_ETCDIR} > yaws_generated.erl
+test -d $YAWS_VARDIR || mkdir $YAWS_VARDIR
+test -d $YAWS_ETCDIR || mkdir $YAWS_ETCDIR
+
+cd ../scripts
+
+case $YAWS_LOCALINSTALL in
+	true)
+		test -f ../bin/yaws || cat yaws.template | \
+			./Subst %yawsdir% "$YAWS_DIR"  | \
+			./Subst %vardir% "${YAWS_VARDIR}"  | \
+			./Subst %run_erl% "${YAWS_ERLBINDIR}/run_erl"  | \
+			./Subst %to_erl% "${YAWS_ERLBINDIR}/to_erl"  | \
+			./Subst %erl% ${ERL_BIN}  | \
+			./Subst %werl% ${WERL_BIN}  > ../bin/yaws
+		if [ -d $HOME/yaws_logs ]; then
+			YAWS_LOGDIR=$HOME/yaws_logs
+		else
+			YAWS_LOGDIR=$YAWS_VARDIR/yaws_logs
+		fi
+		test -d $YAWS_LOGDIR || mkdir $YAWS_LOGDIR
+		YAWS_CONFFILE=$YAWS_ETCDIR/yaws.conf
+		test -f ${YAWS_CONFFILE} || cat yaws.conf.template | \
+			./Subst %yawsdir% "`pwd`/.."  | \
+			./Subst %logdir% ${YAWS_LOGDIR}  | \
+			./Subst %host% `hostname`  | \
+			./Subst %port% 8000  | \
+			./Subst %vardir% "${YAWS_VARDIR}"  | \
+			./Subst %docroot% `pwd`/../www  | \
+			./Subst %certdir% `pwd`/../ssl  | \
+			./Subst %sslport% 4443  > ${YAWS_CONFFILE};
+		;;
+	*)
+		echo "ERROR: Configurations other than 'localinstall' not yet supported with rebar"
+		exit 1
+		;;
+esac
+test -x ../bin/yaws || chmod +x ../bin/yaws
+
+cd ..
