@@ -38,8 +38,6 @@
         ((GC#gconf.flags band ?GC_FAIL_ON_BIND_ERR) /= 0)).
 -define(gc_pick_first_virthost_on_nomatch(GC),
         ((GC#gconf.flags band ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH) /= 0)).
--define(gc_use_fdsrv(GC),
-        ((GC#gconf.flags band ?GC_USE_FDSRV) /= 0)).
 -define(gc_use_old_ssl(GC),
         ((GC#gconf.flags band ?GC_USE_OLD_SSL) /= 0)).
 
@@ -59,8 +57,6 @@
 -define(gc_set_pick_first_virthost_on_nomatch(GC, Bool), 
         GC#gconf{flags = yaws:flag(GC#gconf.flags,
                                    ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH,Bool)}).
--define(gc_set_use_fdsrv(GC, Bool), 
-        GC#gconf{flags = yaws:flag(GC#gconf.flags,?GC_USE_FDSRV,Bool)}).
 -define(gc_set_use_old_ssl(GC, Bool), 
         GC#gconf{flags = yaws:flag(GC#gconf.flags,?GC_USE_OLD_SSL,Bool)}).
 
@@ -70,7 +66,8 @@
 -record(gconf,{yaws_dir,           %% topdir of Yaws installation
                trace,              %% false | {true,http}|{true,traffic}
                flags = ?GC_DEF,    %% boolean flags
-               logdir,          
+               logdir,
+               logger_mod = yaws_log, % access logging module
                ebin_dir = [],
                runmods = [],       %% runmods for entire server
                keepalive_timeout = 30000,

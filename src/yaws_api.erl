@@ -69,12 +69,113 @@
 -export([binding/1,binding_exists/1,
          dir_listing/1, dir_listing/2, redirect_self/1]).
 
+-export([arg_clisock/1
+         , arg_client_ip_port/1
+         , arg_headers/1
+         , arg_req/1
+         , arg_clidata/1
+         , arg_server_path/1
+         , arg_querydata/1
+         , arg_appmoddata/1
+         , arg_docroot/1
+         , arg_docroot_mount/1
+         , arg_fullpath/1
+         , arg_cont/1
+         , arg_state/1
+         , arg_pid/1
+         , arg_opaque/1
+         , arg_appmod_prepath/1
+         , arg_prepath/1
+         , arg_pathinfo/1
+
+         , http_request_method/1
+         , http_request_path/1
+         , http_request_version/1
+
+         , http_response_version/1
+         , http_response_status/1
+         , http_response_phrase/1
+
+         , headers_connection/1
+         , headers_accept/1
+         , headers_host/1
+         , headers_if_modified_since/1
+         , headers_if_match/1
+         , headers_if_none_match/1
+         , headers_if_range/1
+         , headers_if_unmodified_since/1
+         , headers_range/1
+         , headers_referer/1
+         , headers_user_agent/1
+         , headers_accept_ranges/1
+         , headers_cookie/1
+         , headers_keep_alive/1
+         , headers_location/1
+         , headers_content_length/1
+         , headers_content_type/1
+         , headers_content_encoding/1
+         , headers_authorization/1
+         , headers_transfer_encoding/1
+         , headers_x_forwarded_for/1
+         , headers_other/1
+         
+        ]).
+
 
 -import(lists, [map/2, flatten/1, reverse/1]).
 
 %% these are a bunch of function that are useful inside
 %% yaws scripts
 
+arg_clisock(#arg{clisock = X}) -> X.
+arg_client_ip_port(#arg{client_ip_port = X}) -> X.
+arg_headers(#arg{headers = X}) -> X.
+arg_req(#arg{req = X}) -> X.
+arg_clidata(#arg{clidata = X}) -> X.
+arg_server_path(#arg{server_path = X}) -> X.
+arg_querydata(#arg{querydata = X}) -> X.
+arg_appmoddata(#arg{appmoddata = X}) -> X.
+arg_docroot(#arg{docroot = X}) -> X.
+arg_docroot_mount(#arg{docroot_mount = X}) -> X.
+arg_fullpath(#arg{fullpath = X}) -> X.
+arg_cont(#arg{cont = X}) -> X.
+arg_state(#arg{state = X}) -> X.
+arg_pid(#arg{pid = X}) -> X.
+arg_opaque(#arg{opaque = X}) -> X.
+arg_appmod_prepath(#arg{appmod_prepath = X}) -> X.
+arg_prepath(#arg{prepath = X}) -> X.
+arg_pathinfo(#arg{pathinfo = X}) ->  X.
+
+http_request_method(#http_request{method = X}) -> X.
+http_request_path(#http_request{path = X}) -> X.
+http_request_version(#http_request{version = X}) -> X.
+
+http_response_version(#http_response{version = X}) -> X.
+http_response_status(#http_response{status = X}) -> X.
+http_response_phrase(#http_response{phrase = X}) -> X.
+
+headers_connection(#headers{connection = X}) -> X.
+headers_accept(#headers{accept = X}) -> X.
+headers_host(#headers{host = X}) -> X.
+headers_if_modified_since(#headers{if_modified_since = X}) -> X.
+headers_if_match(#headers{if_match = X}) -> X.
+headers_if_none_match(#headers{if_none_match = X}) -> X.
+headers_if_range(#headers{if_range = X}) -> X.
+headers_if_unmodified_since(#headers{if_unmodified_since = X}) -> X.
+headers_range(#headers{range = X}) -> X.
+headers_referer(#headers{referer = X}) -> X.
+headers_user_agent(#headers{user_agent = X}) -> X.
+headers_accept_ranges(#headers{accept_ranges = X}) -> X.
+headers_cookie(#headers{cookie = X}) -> X.
+headers_keep_alive(#headers{keep_alive = X}) -> X.
+headers_location(#headers{location = X}) -> X.
+headers_content_length(#headers{content_length = X}) -> X.
+headers_content_type(#headers{content_type = X}) -> X.
+headers_content_encoding(#headers{content_encoding = X}) -> X.
+headers_authorization(#headers{authorization = X}) -> X.
+headers_transfer_encoding(#headers{transfer_encoding = X}) -> X.
+headers_x_forwarded_for(#headers{x_forwarded_for = X}) -> X.
+headers_other(#headers{other = X}) -> X.
 
 
 %% parse the command line query data
@@ -315,30 +416,38 @@ parse_multi(header, [H|T], Boundary, Acc, Res, Tmp) ->
 parse_multi(header, [], Boundary, Acc, Res, Tmp) ->
     {cont, {header, [], Boundary, Acc, Tmp}, Res};
 
+%% store in case no match
 parse_multi(body, [B|T], [B|T1], Acc, Res, _Tmp) ->
-    parse_multi(boundary, T, T1, Acc, Res, {[B|T], [B|T1]}); %% store in case no match
+    parse_multi(boundary, T, T1, Acc, Res, {[B|T], [B|T1]}); 
 parse_multi(body, [H|T], Boundary, Acc, Res, Tmp) ->
     parse_multi(body, T, Boundary, [H|Acc], Res, Tmp);
-parse_multi(body, [], Boundary, [], Res, Tmp) ->  %% would be empty partial body result
+%% would be empty partial body result
+parse_multi(body, [], Boundary, [], Res, Tmp) ->  
     {cont, {body, [], Boundary, [], Tmp}, Res};
-parse_multi(body, [], Boundary, Acc, Res, Tmp) ->        %% make a partial body result
+%% make a partial body result
+parse_multi(body, [], Boundary, Acc, Res, Tmp) ->        
     {cont, {body, [], Boundary, [], Tmp}, [{part_body, lists:reverse(Acc)}|Res]};
 
 parse_multi(boundary, [B|T], [B|T1], Acc, Res, Tmp) ->
     parse_multi(boundary, T, T1, Acc, Res, Tmp);
-parse_multi(boundary, [_H|_T], [_B|_T1], start, Res, {[D|T2], Bound}) -> %% false alarm
+%% false alarm
+parse_multi(boundary, [_H|_T], [_B|_T1], start, Res, {[D|T2], Bound}) -> 
     parse_multi(body, T2, Bound, [D], Res, []);
-parse_multi(boundary, [_H|_T], [_B|_T1], Acc, Res, {[D|T2], Bound}) -> %% false alarm
+%% false alarm
+parse_multi(boundary, [_H|_T], [_B|_T1], Acc, Res, {[D|T2], Bound}) -> 
     parse_multi(body, T2, Bound, [D|Acc], Res, []);
-parse_multi(boundary, [], [B|T1], Acc, Res, Tmp) -> %% run out of body
+%% run out of body
+parse_multi(boundary, [], [B|T1], Acc, Res, Tmp) -> 
     {cont, {boundary, [], [B|T1], Acc, Tmp}, Res};
 parse_multi(boundary, [], [], start, Res, {_, Bound}) ->
     {cont, {is_end, [], Bound, [], []}, Res};
 parse_multi(boundary, [], [], Acc, Res, {_, Bound}) ->
     {cont, {is_end, [], Bound, [], []}, [{body, lists:reverse(Acc)}|Res]};
-parse_multi(boundary, [H|T], [], start, Res, {_, Bound}) -> %% matched whole boundary!
+%% matched whole boundary!
+parse_multi(boundary, [H|T], [], start, Res, {_, Bound}) -> 
     parse_multi(is_end, [H|T], Bound, [], Res, []);
-parse_multi(boundary, [H|T], [], Acc, Res, {_, Bound}) -> %% matched whole boundary!
+%% matched whole boundary!
+parse_multi(boundary, [H|T], [], Acc, Res, {_, Bound}) -> 
     parse_multi(is_end, [H|T], Bound, [], [{body, lists:reverse(Acc)}|Res], []);
 
 parse_multi(is_end, "--"++_, _Boundary, _Acc, Res, _Tmp) ->
@@ -401,89 +510,46 @@ merge_lines_822([Line|Lines], Acc) ->
 %% which is used for file upload
 
 parse_post_data_urlencoded(Bin) ->
-    parse_post_data_urlencoded(Bin, ['ALLSTRINGS']).
+    do_parse_spec(Bin, nokey, [], key).
 
-parse_post_data_urlencoded(Bin, Spec) ->
-    do_parse_spec(Bin, Spec, nokey, [], key).
-
-%% Spec is a typelist of the types we expect
-%% acceptable types are
-
-%% int
-%% float
-%% string
-%% ip
-%% binary
-%% checkbox
-%% 'ALLSTRINGS' 
-
-%% special value ['ALLSTRINGS'] can be used in order to denote that
-%% the remainder of the args are all strings
 
 %% It will return a [{Key, Value}] list from the post data
-%% with the same length as the Spec or EXIT
-%% special value undefined is reserverd for non set fields
-%% Key wil always be a regular atom.
-do_parse_spec(<<$%, Hi:8, Lo:8, Tail/binary>>, Spec, Last, Cur, State) 
+
+do_parse_spec(<<$%, Hi:8, Lo:8, Tail/binary>>, Last, Cur, State) 
     when Hi /= $u ->
     Hex = yaws:hex_to_integer([Hi, Lo]),
-    do_parse_spec(Tail, Spec, Last, [ Hex | Cur],  State);
+    do_parse_spec(Tail, Last, [ Hex | Cur],  State);
                
-do_parse_spec(<<$&, Tail/binary>>, Spec, _Last , Cur,  key) ->
+do_parse_spec(<<$&, Tail/binary>>, _Last , Cur,  key) ->
     [{lists:reverse(Cur), undefined} |
-     do_parse_spec(Tail, Spec, nokey, [], key)];  %% cont keymode
+     do_parse_spec(Tail, nokey, [], key)];  %% cont keymode
 
-do_parse_spec(<<$&, Tail/binary>>, Spec, Last, Cur, value) ->
-    [S|Ss] = tail_spec(Spec),
-    V = {Last, coerce_type(S, Cur)},
-    [V | do_parse_spec(Tail, Ss, nokey, [], key)];
+do_parse_spec(<<$&, Tail/binary>>, Last, Cur, value) ->
+    V = {Last, lists:reverse(Cur)},
+    [V | do_parse_spec(Tail, nokey, [], key)];
 
-do_parse_spec(<<$+, Tail/binary>>, Spec, Last, Cur,  State) ->
-    do_parse_spec(Tail, Spec, Last, [$\s|Cur], State);
+do_parse_spec(<<$+, Tail/binary>>, Last, Cur,  State) ->
+    do_parse_spec(Tail, Last, [$\s|Cur], State);
 
-do_parse_spec(<<$=, Tail/binary>>, Spec, _Last, Cur, key) ->
-    do_parse_spec(Tail, Spec, lists:reverse(Cur), [], value); %% change mode
+do_parse_spec(<<$=, Tail/binary>>, _Last, Cur, key) ->
+    do_parse_spec(Tail, lists:reverse(Cur), [], value); %% change mode
 
 do_parse_spec(<<$%, $u, A:8, B:8,C:8,D:8, Tail/binary>>, 
-	       Spec, Last, Cur, State) ->
+	       Last, Cur, State) ->
     %% non-standard encoding for Unicode characters: %uxxxx,		     
     Hex = yaws:hex_to_integer([A,B,C,D]),
-    do_parse_spec(Tail, Spec, Last, [ Hex | Cur],  State);
+    do_parse_spec(Tail, Last, [ Hex | Cur],  State);
 
-do_parse_spec(<<H:8, Tail/binary>>, Spec, Last, Cur, State) ->
-    do_parse_spec(Tail, Spec, Last, [H|Cur], State);
-do_parse_spec(<<>>, _Spec, nokey, Cur, _State) ->
+do_parse_spec(<<H:8, Tail/binary>>, Last, Cur, State) ->
+    do_parse_spec(Tail, Last, [H|Cur], State);
+do_parse_spec(<<>>, nokey, Cur, _State) ->
     [{lists:reverse(Cur), undefined}];
-do_parse_spec(<<>>, Spec, Last, Cur, _State) ->
-    [S|_Ss] = tail_spec(Spec),
-    [{Last, coerce_type(S, Cur)}];
-do_parse_spec(undefined,_,_,_,_) ->
+do_parse_spec(<<>>, Last, Cur, _State) ->
+    [{Last, lists:reverse(Cur)}];
+do_parse_spec(undefined,_,_,_) ->
     [];
-do_parse_spec(QueryList, Spec, Last, Cur, State) when is_list(QueryList) ->
-    do_parse_spec(list_to_binary(QueryList), Spec, Last, Cur, State).
-
-
-tail_spec(['ALLSTRINGS']) ->
-    [string, 'ALLSTRINGS'];
-tail_spec(L) ->
-    L.
-
-coerce_type(_, []) ->
-    undefined;
-coerce_type(int, Str) ->
-    list_to_integer(lists:reverse(Str));
-coerce_type(float, Str) ->
-    list_to_float(lists:reverse(Str));
-coerce_type(string, Str) ->
-    lists:reverse(Str);
-coerce_type(checkbox, "no") ->
-    on;
-coerce_type(checkbox, _Str) ->
-    off;
-coerce_type(ip, _Str) ->
-    erlang:error(nyi_ip);
-coerce_type(binary, Str) ->
-    list_to_binary(lists:reverse(Str)).
+do_parse_spec(QueryList, Last, Cur, State) when is_list(QueryList) ->
+    do_parse_spec(list_to_binary(QueryList), Last, Cur, State).
 
 
 code_to_phrase(100) -> "Continue";
@@ -1480,10 +1546,10 @@ ehtml_attrs_expander(Var) when is_atom(Var) ->
     [{ehtml_attrs, ehtml_var_name(Var)}].
 
 ehtml_attr_part_expander(A) when is_atom(A) ->
-    case ehtml_var_p(A) of
-        true  -> {preformatted, ehtml_var_name(A)};
-        false -> atom_to_list(A)
-    end;
+    case atom_to_list(A) of
+        [$$|_Rest] -> {preformatted, ehtml_var_name(A)};
+        Other -> Other
+    end;     
 ehtml_attr_part_expander(I) when is_integer(I) -> integer_to_list(I);
 ehtml_attr_part_expander(S) when is_list(S) -> S.
 
@@ -1519,14 +1585,10 @@ ehtml_eval({Type, Var}, Env) ->
 %% Get the name part of a variable reference.
 %% e.g. ehtml_var_name('$foo') -> foo.
 ehtml_var_name(A) when is_atom(A) ->
-    case ehtml_var_p(A) of
-        true -> list_to_atom(tl(atom_to_list(A)));
-        false -> erlang:error({bad_ehtml_var_name, A})
-    end.
-
-%% Is X a variable reference? Variable references are atoms starting with $.
-ehtml_var_p(X) when is_atom(X) -> hd(atom_to_list(X)) == $$;
-ehtml_var_p(_) -> false.
+    case atom_to_list(A) of
+        [$$|Rest] -> list_to_atom(Rest);
+        _Other -> erlang:error({bad_ehtml_var_name, A})
+    end. 
 
 ehtml_expander_test() ->
     %% Expr is a template containing variables.
@@ -1968,6 +2030,12 @@ embedded_start_conf(DocRoot, SL, GL, Id)
                       [[yaws:create_sconf(DocRoot, SLItem)] || SLItem <- SL]
               end,
     SoapChild = yaws_config:add_yaws_soap_srv(GC, false),
+
+    %% In case a server is started before any configuration has been set,
+    %% this makes it possible to get hold of the 'pending' configuration.
+    %% (see for example the start of the yaws_session_server)
+    ok = application:set_env(yaws, embedded_conf, [{sclist,SCList},{gc,GC}]),
+
     {ok, SCList, GC, ChildSpecs ++ SoapChild}.
 
 

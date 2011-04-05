@@ -5,7 +5,7 @@ include ./vsn.mk
 
 PKGCONFIG_FILES = yaws.pc
 
-all debug clean:	
+all debug clean: cleantests
 	@set -e ; \
 	  for d in $(SUBDIRS) ; do \
 	    if [ -f $$d/Makefile ]; then ( cd $$d && $(MAKE) $@ ) || exit 1 ; fi ; \
@@ -13,6 +13,8 @@ all debug clean:
 	rm -rf yaws-${YAWS_VSN}.script yaws-${YAWS_VSN}.boot
 	rm -rf yaws-${YAWS_VSN}.rel yaws-${YAWS_VSN}.tar.gz
 
+cleantests:
+	cd test && $(MAKE) clean
 
 install:	all 
 	set -e ; \
@@ -83,13 +85,17 @@ foo:
 
 yaws.plt:	
 	dialyzer --build_plt -r . --output_plt yaws.plt \
-   	   -r $(ERLDIR)/lib/sasl-$(SASL_VSN) \
-   	   -r $(ERLDIR)/lib/kernel-$(KERNEL_VSN) \
-   	   -r $(ERLDIR)/lib/stdlib-$(STDLIB_VSN) \
-   	   -r $(ERLDIR)/lib/erts-$(ERTS_VSN) 
+	   -r $(ERLDIR)/lib/sasl-$(SASL_VSN) \
+	   -r $(ERLDIR)/lib/kernel-$(KERNEL_VSN) \
+	   -r $(ERLDIR)/lib/stdlib-$(STDLIB_VSN) \
+	   -r $(ERLDIR)/lib/erts-$(ERTS_VSN) 
 
 # Not debug compiled, let's just ignore it
 #   	   -r $(ERLDIR)/lib/ssl-$(SSL_VSN) 
 
 dialyzer:	yaws.plt
 	dialyzer --plt yaws.plt -r .
+
+.PHONY: test
+test:
+	cd test && $(MAKE) all setup test

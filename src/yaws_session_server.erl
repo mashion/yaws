@@ -16,7 +16,7 @@
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
-		 code_change/3]).
+         code_change/3]).
 
 -include("../include/yaws_api.hrl").
 -include("../include/yaws.hrl").
@@ -55,15 +55,41 @@
 %%% API
 %%%----------------------------------------------------------------------
 start_link() ->
-    {ok, #gconf{ysession_mod = Backend}, _} = yaws_server:getconf(),
+    Backend = get_yaws_session_server_backend(),
     gen_server:start_link({local, yaws_session_server}, 
                           yaws_session_server, Backend, []).
 start() ->
-    {ok, #gconf{ysession_mod = Backend}, _} = yaws_server:getconf(),
+    Backend = get_yaws_session_server_backend(),
     gen_server:start({local, yaws_session_server}, 
                      yaws_session_server, Backend, []).
 stop() ->
     gen_server:call(?MODULE, stop, infinity).
+
+
+%% We are bending over here in our pursuit of finding a
+%% proper ysession_server backend.
+get_yaws_session_server_backend() ->
+    #gconf{ysession_mod = DefaultBackend} = #gconf{},
+    case yaws_server:getconf() of
+	{ok, #gconf{ysession_mod = Backend}, _} -> Backend;
+	_ ->
+	    case application:get_env(yaws, embedded) of
+		{ok, true} ->
+		    case application:get_env(yaws, embedded_conf) of
+			{ok, L} when is_list(L) ->
+			    case lists:keysearch(gc, 1, L) of
+				{value, {_, #gconf{ysession_mod = Backend}}} ->
+				    Backend;
+				_ ->
+				    DefaultBackend
+			    end;
+			_ ->
+			    DefaultBackend
+		    end;
+		_ ->
+		    DefaultBackend
+	    end
+    end.
 
 
 %% will return a new cookie as a string
@@ -82,7 +108,7 @@ new_session(Opaque, TTL, Cleanup) ->
 new_session(Opaque, TTL, Cleanup, Cookie) ->
     Call = {new_session, Opaque, TTL, Cleanup, Cookie},
     gen_server:call(?MODULE, Call, infinity).
-    
+
 cookieval_to_opaque(Cookie) ->
     gen_server:call(?MODULE, {cookieval_to_opaque, Cookie}, infinity).
 
@@ -259,7 +285,7 @@ to() ->
 %% pretty good seed, but non portable
 seed() ->
     case (catch list_to_binary(
-           os:cmd("dd if=/dev/urandom ibs=12 count=1 2>/dev/null"))) of
+                  os:cmd("dd if=/dev/urandom ibs=12 count=1 2>/dev/null"))) of
         <<X:32, Y:32, Z:32>> ->
             {X, Y, Z};
         _ ->
@@ -333,6 +359,6 @@ traverse(N, Key) ->
                     traverse(N, Next)                    
             end;
         [] ->
-           traverse(N, ets:next(?MODULE, Key))
+            traverse(N, ets:next(?MODULE, Key))
     end.
 

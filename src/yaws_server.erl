@@ -24,7 +24,7 @@
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
-        code_change/3]).
+         code_change/3]).
 -export([status/0,
          getconf/0,
          stats/0,
@@ -187,7 +187,7 @@ init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
                       [GC#gconf.id, yaws_generated:is_local_install(),
                        if ?gc_has_debug(GC) ->
                                "Running with debug checks "
-                               "turned on (slower server) \n";
+                                   "turned on (slower server) \n";
                           true ->
                                ""
                        end,
@@ -358,8 +358,6 @@ handle_call({add_sconf, SC}, From, State) ->
                 false ->
                     {reply, ok, State};
                 {true, Pair} ->
-                                                %Pid = element(1, Pair),
-                                                %Pid ! {newuid, GC#gconf.uid},
                     P2 = [Pair | State#state.pairs],
                     {reply, ok, State#state{pairs = P2}}
             end
@@ -420,24 +418,6 @@ terminate(_Reason, _State) ->
 
 do_listen(GC, SC) ->
     case SC#sconf.ssl of
-        undefined when ?gc_use_fdsrv(GC) ->
-            %% Use fdsrv kit from jungerl, requires fdsrv
-            %% to be properly installed
-            %% This solves the problem of binding to privileged ports. A
-            %% better solution is to use privbind or authbind. Also this
-            %% doesn't work for ssl.
-
-            fdsrv:start(),
-            case fdsrv:bind_socket(tcp, {SC#sconf.listen, SC#sconf.port}) of
-                {ok, Fd} ->
-                    {nossl, undefined,
-                     gen_tcp_listen(SC#sconf.port,[{fd, Fd}|listen_opts(SC)])};
-                ignore ->
-                    {nossl, undefined,
-                     gen_tcp_listen(SC#sconf.port, listen_opts(SC))};
-                Err ->
-                    {nossl, undefined, Err}
-            end;
         undefined ->
             {nossl, undefined, gen_tcp_listen(SC#sconf.port, listen_opts(SC))};
         SSL ->
@@ -465,18 +445,18 @@ certinfo(SSL) ->
                                      undefined
                              end;
                         true ->
-                            undefined
+                             undefined
                      end,
           cacertfile = if SSL#ssl.cacertfile /= undefined ->
-                             case file:read_file_info(SSL#ssl.cacertfile) of
-                                 {ok, FI} ->
-                                     FI#file_info.mtime;
-                                 _ ->
-                                     undefined
-                             end;
-                        true ->
-                            undefined
-                     end
+                               case file:read_file_info(SSL#ssl.cacertfile) of
+                                   {ok, FI} ->
+                                       FI#file_info.mtime;
+                                   _ ->
+                                       undefined
+                               end;
+                          true ->
+                               undefined
+                       end
          }.
 
 gen_tcp_listen(Port, Opts) ->
@@ -518,7 +498,7 @@ gserv(Top, GC, Group0) ->
                                              [yaws:sconf_to_srvstr(S),
                                               S#sconf.docroot])
                        end, Group)
-                    ]),
+              ]),
             proc_lib:init_ack({self(), Group}),
             GS = #gs{gconf = GC,
                      group = Group,
@@ -564,12 +544,12 @@ setup_ets(SC) ->
 clear_ets_complete(SC) ->
     case SC#sconf.ets of
         undefined ->
-             setup_ets(SC);
-         E ->
-             ets:match_delete(E,'_'),
-             ets:insert(E, {num_files, 0}),
-             ets:insert(E, {num_bytes, 0}),
-             SC
+            setup_ets(SC);
+        E ->
+            ets:match_delete(E,'_'),
+            ets:insert(E, {num_files, 0}),
+            ets:insert(E, {num_bytes, 0}),
+            SC
     end.
 
 
@@ -587,7 +567,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
  	    close_accepted_if_max(GS,Accepted),
  	    New = acceptor(GS),
  	    GS2 = GS#gs{connections=GS#gs.connections + 1},
-            gserv_loop(GS2#gs{sessions = GS2#gs.sessions + 1}, Ready, Rnum, New);
+            gserv_loop(GS2#gs{sessions = GS2#gs.sessions + 1}, Ready, Rnum,New);
         {_From, next, Accepted} ->
 	    close_accepted_if_max(GS,Accepted),
             [{_Then, R}|RS] = Ready,
@@ -625,8 +605,8 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                     foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls),
                     exit(normal);
                 _ when Reason == failaccept ->
-                     error_logger:format(
-                       "Accept proc died, terminate gserv",[]),
+                    error_logger:format(
+                      "Accept proc died, terminate gserv",[]),
                     {links, Ls} = process_info(self(), links),
                     foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls),
                     exit(noserver);
@@ -652,7 +632,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                     erlang:error(nosc);
                 true ->
 		    Pid = OldSc#sconf.stats,
-		    error_logger:info_msg("update_sconf: Stats pid ~p~n", [Pid]),
+		    error_logger:info_msg("update_sconf: Stats pid ~p~n",[Pid]),
 		    case Pid of
 			undefined ->
 			    ok;
@@ -826,9 +806,9 @@ listen_opts(SC) ->
     InetType = if 
                    is_tuple( SC#sconf.listen), size( SC#sconf.listen) == 8 ->
                        [inet6];
-                 true ->
+                   true ->
                        []
-             end,
+               end,
     [binary,
      {ip, SC#sconf.listen},
      {packet, http},
@@ -842,9 +822,9 @@ ssl_listen_opts(GC, SC, SSL) ->
     InetType = if 
                    is_tuple( SC#sconf.listen), size( SC#sconf.listen) == 8 ->
                        [inet6];
-                 true ->
+                   true ->
                        []
-             end,
+               end,
     [binary,
      {ip, SC#sconf.listen},
      {packet, http},
@@ -971,7 +951,7 @@ acceptor0(GS, Top) ->
             %% Skip closing the socket, as required by web sockets & stream
             %% processes.
             CloseSocket = (get(outh) =:= undefined) orelse 
-                                (done_or_continue() =:= done),
+                          (done_or_continue() =:= done),
             case CloseSocket of
                 false -> ok;
                 true ->
@@ -1041,7 +1021,7 @@ acceptor0(GS, Top) ->
 	    Top ! {self(), decrement},
             exit(normal);
         {error, Reason} when ((Reason == emfile) or
-                              (Reason == enfile)) ->
+                                                   (Reason == enfile)) ->
             error_logger:format("yaws: Failed to accept - no more "
                                 "file descriptors - terminating: ~p~n",
                                 [Reason]),
@@ -1366,9 +1346,10 @@ maybe_access_log(Ip, Req, H) ->
                                      end
                              end
                      end,
-            yaws_log:accesslog(SC#sconf.servername, RealIp, User,
-                               [Meth, $\s, Path, $\s, Ver],
-                               Status, Len, Referrer, UserAgent);
+            LoggerMod = GC#gconf.logger_mod,
+            LoggerMod:accesslog(SC#sconf.servername, RealIp, User,
+                                [Meth, $\s, Path, $\s, Ver],
+                                Status, Len, Referrer, UserAgent);
         false ->
             ignore
     end.
@@ -2508,36 +2489,32 @@ finish_up_dyn_file(Arg, CliSock) ->
 
 %% do the header and continue
 deliver_dyn_file(CliSock, Specs, ARG, UT, N) ->
-    Fd = ut_open(UT),
-    Bin = ut_read(Fd),
-    deliver_dyn_file(CliSock, Bin, Fd, Specs, ARG, UT, N).
+    Bin = ut_read(UT),
+    deliver_dyn_file(CliSock, Bin, Specs, ARG, UT, N).
 
-
-
-deliver_dyn_file(CliSock, Bin, Fd, [H|T],Arg, UT, N) ->
+deliver_dyn_file(CliSock, Bin, [H|T], Arg, UT, N) ->
     ?Debug("deliver_dyn_file: ~p~n", [H]),
     case H of
         {mod, LineNo, YawsFile, NumChars, Mod, out} ->
-            {_, Bin2} = skip_data(Bin, Fd, NumChars),
+            {_, Bin2} = skip_data(Bin, NumChars),
             deliver_dyn_part(CliSock, LineNo, YawsFile,
                              N, Arg, UT,
                              fun(A)->Mod:out(A) end,
-                             fun(A)->deliver_dyn_file(
-                                       CliSock,Bin2,Fd,T,A,UT,0)
+                             fun(A)->deliver_dyn_file(CliSock,Bin2,T,A,UT,0)
                              end);
         {data, 0} ->
-            deliver_dyn_file(CliSock, Bin, Fd,T,Arg,UT,N);
+            deliver_dyn_file(CliSock, Bin, T, Arg, UT, N);
         {data, NumChars} ->
-            {Send, Bin2} = skip_data(Bin, Fd, NumChars),
+            {Send, Bin2} = skip_data(Bin, NumChars),
             accumulate_content(Send),
-            deliver_dyn_file(CliSock, Bin2, Fd, T,Arg,UT,N);
+            deliver_dyn_file(CliSock, Bin2, T, Arg, UT, N);
         {skip, 0} ->
-            deliver_dyn_file(CliSock, Bin, Fd,T,Arg,UT,N);
+            deliver_dyn_file(CliSock, Bin, T, Arg, UT, N);
         {skip, NumChars} ->
-            {_, Bin2} = skip_data(Bin, Fd, NumChars),
-            deliver_dyn_file(CliSock, Bin2, Fd, T,Arg,UT,N);
+            {_, Bin2} = skip_data(Bin, NumChars),
+            deliver_dyn_file(CliSock, Bin2, T, Arg, UT, N);
         {binding, NumChars} ->
-            {Send, Bin2} = skip_data(Bin, Fd, NumChars),
+            {Send, Bin2} = skip_data(Bin, NumChars),
             "%%"++Key = binary_to_list(Send),
             Chunk =
                 case get({binding, Key--"%%"}) of
@@ -2545,20 +2522,19 @@ deliver_dyn_file(CliSock, Bin, Fd, [H|T],Arg, UT, N) ->
                     Value -> Value
                 end,
             accumulate_content(Chunk),
-            deliver_dyn_file(CliSock, Bin2, Fd, T, Arg, UT, N);
+            deliver_dyn_file(CliSock, Bin2, T, Arg, UT, N);
         {error, NumChars, Str} ->
-            {_, Bin2} = skip_data(Bin, Fd, NumChars),
+            {_, Bin2} = skip_data(Bin, NumChars),
             accumulate_content(Str),
-            deliver_dyn_file(CliSock, Bin2, Fd, T,Arg,UT, N);
+            deliver_dyn_file(CliSock, Bin2, T, Arg, UT, N);
         {verbatim, NumChars, Data} ->
-            {_Send, Bin2} = skip_data(Bin, Fd, NumChars),
+            {_Send, Bin2} = skip_data(Bin, NumChars),
             accumulate_content(Data),
-            deliver_dyn_file(CliSock, Bin2, Fd, T,Arg,UT,N);
+            deliver_dyn_file(CliSock, Bin2, T, Arg, UT, N);
         yssi ->
             ok
     end;
-
-deliver_dyn_file(CliSock, _Bin, _Fd, [], ARG,_UT,_N) ->
+deliver_dyn_file(CliSock, _Bin, [], ARG,_UT,_N) ->
     ?Debug("deliver_dyn: done~n", []),
     finish_up_dyn_file(ARG, CliSock).
 
@@ -2761,34 +2737,10 @@ demonitor_streamcontent_pid(Ref) ->
             ok
     end.
 
-skip_data(List, Fd, Sz) when is_list(List) ->
-    skip_data(list_to_binary(List), Fd, Sz);
-skip_data(Bin, Fd, Sz) when is_binary(Bin) ->
+skip_data(Bin, Sz) ->
     ?Debug("Skip data ~p bytes from", [Sz]),
-    case  Bin of
-        <<Head:Sz/binary ,Tail/binary>> ->
-            {Head, Tail};
-        _ ->
-            case (catch ut_read(Fd)) of
-                {ok, Bin2} when is_binary(Bin2) ->
-                    Bin3 = <<Bin/binary, Bin2/binary>>,
-                    skip_data(Bin3, Fd, Sz);
-                Bin2 when is_binary(Bin2) ->
-                    Bin3 = <<Bin/binary, Bin2/binary>>,
-                    skip_data(Bin3, Fd, Sz);
-                _Err ->
-                    ?Debug("EXIT in skip_data: ~p  ~p ~p~n", [Bin, Sz, _Err]),
-                    exit(normal)
-            end
-    end;
-skip_data({bin, Bin}, _, Sz) ->
-    ?Debug("Skip bin data ~p bytes ", [Sz]),
-    <<Head:Sz/binary ,Tail/binary>> = Bin,
-    {Head, {bin, Tail}};
-skip_data({ok, X}, Fd, Sz) ->
-    skip_data(X, Fd, Sz).
-
-
+    <<Head:Sz/binary, Tail/binary>> = Bin,
+    {Head, Tail}.
 
 to_binary(B) when is_binary(B) ->
     B;
@@ -2850,7 +2802,7 @@ handle_out_reply({yssi, Yfile}, LineNo, YawsFile, UT, ARG) ->
                 %seems unwieldy. just how much performance can it gain if we
                 %% end up using slower funcs like lists:flatten anyway?
                 %% review!.
-                       url_type(lists:flatten(UT#urltype.dir) ++ [$/|Yfile],
+                url_type(lists:flatten(UT#urltype.dir) ++ [$/|Yfile],
                          ARG#arg.docroot, ARG#arg.docroot_mount)
         end,
 
@@ -3265,19 +3217,12 @@ decide_deflate(true, Arg, Data, decide, Mode) ->
             ?Debug("Mime-Type: ~p~n", [Mime]),
             case compressible_mime_type(Mime) of
                 true ->
-                    case yaws:accepts_gzip(Arg#arg.headers,
-                                           Mime) of
+                    case yaws:accepts_gzip(Arg#arg.headers, Mime) of
                         true ->
                             case Mode of
                                 final ->
-                                    case yaws_zlib:gzip(to_binary(Data)) of
-                                        {ok, DB} ->
-                                            {data, DB};
-                                        _Err ->
-                                            ?Debug(
-                                               "gzip Err: ~p~n", [_Err]),
-                                            false
-                                    end;
+                                    {ok, DB} = yaws_zlib:gzip(to_binary(Data)),
+                                    {data, DB};
                                 stream ->
                                     true
                             end;
@@ -3392,45 +3337,32 @@ get_more_post_data(PPS, ARG) ->
     end.
 
 
-ut_open(UT) ->
-    ?Debug("ut_open() UT.fullpath = ~p~n", [UT#urltype.fullpath]),
+ut_read(UT) ->
+    ?Debug("ut_read() UT.fullpath = ~p~n", [UT#urltype.fullpath]),
     case yaws:outh_get_content_encoding() of
         identity ->
             case UT#urltype.data of
                 undefined ->
-
-                    ?Debug("ut_open reading\n",[]),
+                    ?Debug("ut_read reading\n",[]),
                     {ok, Bin} = file:read_file(UT#urltype.fullpath),
-                    ?Debug("ut_open read ~p\n",[size(Bin)]),
-                    {bin, Bin};
+                    ?Debug("ut_read read ~p\n",[size(Bin)]),
+                    Bin;
                 B when is_binary(B) ->
-                    {bin, B}
+                    B
             end;
         deflate ->
             case UT#urltype.deflate of
                 B when is_binary(B) ->
-                    ?Debug("ut_open using deflated binary of size ~p~n",
+                    ?Debug("ut_read using deflated binary of size ~p~n",
                            [size(B)]),
-                    {bin, B}
+                    B
             end
     end.
 
 
-ut_read({bin, B}) ->
-    B;
-ut_read(Fd) ->
-    file:read(Fd, 4000).
-
-
-ut_close({bin, _}) ->
-    ok;
-ut_close(Fd) ->
-    file:close(Fd).
-
 parse_range(L, Tot) ->
     case catch parse_range_throw(L, Tot) of
         {'EXIT', _} ->
-                                                % error
             error;
         R -> R
     end.
@@ -3502,16 +3434,16 @@ deliver_file(CliSock, Req, UT, Range) ->
     end.
 
 deliver_small_file(CliSock, _Req, UT, Range) ->
-    Fd = ut_open(UT),
-    case Range of
-        all ->
-            Bin = ut_read(Fd);
-        {fromto, From, To, _Tot} ->
-            Length = To - From + 1,
-            <<_:From/binary, Bin:Length/binary, _/binary>> = ut_read(Fd)
-    end,
+    Bin0 = ut_read(UT),
+    Bin = case Range of
+              all ->
+                  Bin0;
+              {fromto, From, To, _Tot} ->
+                  Length = To - From + 1,
+                  <<_:From/binary, Bin1:Length/binary, _/binary>> = Bin0,
+                  Bin1
+          end,
     accumulate_content(Bin),
-    ut_close(Fd),
     deliver_accumulated(CliSock),
     done_or_continue().
 
@@ -3542,7 +3474,8 @@ send_file(CliSock, Path, all, Priv, _Enc) ->
     ?Debug("send_file(~p,~p, ...)~n", [CliSock, Path]),
     {ok, Fd} = file:open(Path, [raw, binary, read]),
     send_file(CliSock, Fd, Priv);
-send_file(CliSock, Path,  {fromto, From, To, _Tot}, undeflated, no) when is_port(CliSock) ->
+send_file(CliSock, Path,  {fromto, From, To, _Tot}, undeflated, no) 
+  when is_port(CliSock) ->
     Size = To - From + 1,
     yaws_sendfile_compat:send(CliSock, Path, From, Size),
     yaws_stats:sent(Size);

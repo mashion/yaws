@@ -103,9 +103,9 @@
          redirect_scheme_port/1, redirect_scheme/1,
          tmpdir/0, tmpdir/1, split_at/2,
          id_dir/1, ctl_file/1]).
-         
-         
-         
+
+
+
 
 -import(lists, [reverse/1, reverse/2]).
 
@@ -132,19 +132,21 @@ start_embedded(DocRoot, SL, GL) when is_list(DocRoot),is_list(SL),is_list(GL) ->
 start_embedded(DocRoot, SL, GL, Id)
   when is_list(DocRoot), is_list(SL), is_list(GL) ->
     {ok, SCList, GC, _} = yaws_api:embedded_start_conf(DocRoot, SL, GL, Id),
-    application:start(yaws),
+    ok = application:start(yaws),
     yaws_config:add_yaws_soap_srv(GC),
-    yaws_api:setconf(GC, SCList).
+    SCs = [yaws_config:add_yaws_auth(X) || X <- SCList],
+    yaws_api:setconf(GC, SCs),
+    ok.
 
 add_server(DocRoot, SL) when is_list(DocRoot),is_list(SL) ->
     SC  = create_sconf(DocRoot, SL),
     %% Change #auth in authdirs to {Dir, #auth} if needed
     Fun = fun
 	      (A = #auth{dir = [Dir]}, Acc) -> [{Dir, A}| Acc];
-	      (A, Acc)                      -> [A| Acc]
-	  end,
-    Authdirs = lists:foldr(Fun, [], SC#sconf.authdirs),
-    yaws_config:add_sconf(SC#sconf{authdirs = Authdirs}).
+        (A, Acc)                      -> [A| Acc]
+                                                          end,
+Authdirs = lists:foldr(Fun, [], SC#sconf.authdirs),
+yaws_config:add_sconf(SC#sconf{authdirs = Authdirs}).
 
 create_gconf(GL, Id) when is_list(GL) ->
     setup_gconf(GL, yaws_config:make_default_gconf(false, Id)).
@@ -159,7 +161,7 @@ new_ssl()             -> #ssl{}.
 ssl_keyfile(S)              -> S#ssl.keyfile.
 ssl_certfile(S)             -> S#ssl.certfile.
 ssl_verify(S)               -> S#ssl.verify.
-ssl_fail_if_no_peer_cert(S) -> S#ssl.fail_if_no_peer_cert.
+%%ssl_fail_if_no_peer_cert(S) -> S#ssl.fail_if_no_peer_cert.
 ssl_depth(S)                -> S#ssl.depth.
 ssl_password(S)             -> S#ssl.password.
 ssl_cacertfile(S)           -> S#ssl.cacertfile.
@@ -169,7 +171,7 @@ ssl_cachetimeout(S)         -> S#ssl.cachetimeout.
 ssl_keyfile(S, Keyfile)                       -> S#ssl{keyfile = Keyfile}.
 ssl_certfile(S, Certfile)                     -> S#ssl{certfile = Certfile}.
 ssl_verify(S, Verify)                         -> S#ssl{verify = Verify}.
-ssl_fail_if_no_peer_cert(S, FailIfNoPeerCert) -> S#ssl{fail_if_no_peer_cert = FailIfNoPeerCert}.
+%%ssl_fail_if_no_peer_cert(S, FailIfNoPeerCert) -> S#ssl{fail_if_no_peer_cert = FailIfNoPeerCert}.
 ssl_depth(S, Depth)                           -> S#ssl{depth = Depth}.
 ssl_password(S, Password)                     -> S#ssl{password = Password}.
 ssl_cacertfile(S, Cacertfile)                 -> S#ssl{cacertfile = Cacertfile}.
@@ -237,8 +239,6 @@ set_gc_flags([{fail_on_bind_err, Bool}|T], Flags) ->
     set_gc_flags(T, flag(Flags,?GC_FAIL_ON_BIND_ERR,Bool));
 set_gc_flags([{pick_first_virthost_on_nomatch, Bool}|T], Flags) -> 
     set_gc_flags(T, flag(Flags, ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH,Bool));
-set_gc_flags([{use_fdsrv, Bool}|T], Flags) -> 
-    set_gc_flags(T, flag(Flags,?GC_USE_FDSRV,Bool));
 set_gc_flags([{use_old_ssl, Bool}|T], Flags) -> 
     set_gc_flags(T, flag(Flags,?GC_USE_OLD_SSL,Bool));
 set_gc_flags([_|T], Flags) -> 
@@ -890,46 +890,6 @@ parse_qvalue(_) ->
 three_digits_to_integer(D1, D2, D3) ->
     100*(D1-$0)+10*(D2-$0)+D3-$0.
 
-%% has_buggy_deflate(UserAgent, Mime) ->
-%%     UA = parse_ua(UserAgent),
-%%     in_ua(
-%%       fun("Mozilla/5.0") ->
-%%               in_comment(
-%%                 fun("rv:0."++_) ->
-%%                         true;
-%%                    ("Konqueror"++_) ->
-%%                         true;
-%%                    (_) ->
-%%                         false
-%%                 end,
-%%                 UA);
-%%          ("Mozilla/4.0") ->
-%%               in_comment(
-%%                 fun("MSIE"++_) ->
-%%                                                 % The fact that IE is
-%%                                                 % broken does of
-%%                                                 % course mean that we
-%%                                                 % will have to abondon
-%%                                                 % `deflate' (in favor
-%%                                                 % of `gzip')
-%%                                                 % altogether.  To
-%%                                                 % do...
-%%                         true;
-%%                    (_) ->
-%%                         false
-%%                 end,
-%%                 UA);
-%%          ("AppleWebKit"++_) ->
-%%               true;
-%%          ("Galeon"++_) ->
-%%               true;
-%%          ("w3m"++_) ->
-%%                                                 % Problems when saving.
-%%               Mime /= "text/html"; 
-%%          (_)  ->
-%%               false
-%%       end,
-%%       UA).
 
 %% Gzip encoding
 

@@ -41,7 +41,7 @@
 %% Description: Starts the server
 %%--------------------------------------------------------------------
 start_link() ->
-	start_link([]).
+    start_link([]).
 start_link(L) ->
     %% We are dependent on erlsom
     case code:ensure_loaded(erlsom) of
@@ -98,18 +98,19 @@ setup(Id, WsdlFile, Prefix) when is_tuple(Id),size(Id)==2 ->
 %% Description: Initiates the server
 %%--------------------------------------------------------------------
 init(L) -> %% [ {{Mod,Handler}, WsdlFile} ]
-	WsdlList = lists:foldl( fun( SoapSrvMod, OldList) -> 
-									setup_on_init( SoapSrvMod, OldList ) 
-							end,[],L),
+    WsdlList = lists:foldl( fun( SoapSrvMod, OldList) -> 
+                                    setup_on_init( SoapSrvMod, OldList ) 
+                            end,[],L),
     {ok, #s{wsdl_list = WsdlList}}.
 
-setup_on_init( {Id, WsdlFile}, OldList ) when is_tuple(Id),size(Id)==2 ->
-	Wsdl = yaws_soap_lib:initModel(WsdlFile),
-	uinsert({Id, Wsdl}, OldList);
-setup_on_init( {Id, WsdlFile, Prefix}, OldList ) when is_tuple(Id),size(Id)==2 ->
-	Wsdl = yaws_soap_lib:initModel(WsdlFile, Prefix),
-	uinsert({Id, Wsdl}, OldList).
-	
+setup_on_init( {Id, WsdlFile}, OldList ) when is_tuple(Id),size(Id) == 2 ->
+    Wsdl = yaws_soap_lib:initModel(WsdlFile),
+    uinsert({Id, Wsdl}, OldList);
+setup_on_init( {Id, WsdlFile, Prefix}, OldList ) when is_tuple(Id),
+                                                      size(Id) == 2 ->
+    Wsdl = yaws_soap_lib:initModel(WsdlFile, Prefix),
+    uinsert({Id, Wsdl}, OldList).
+
 %%--------------------------------------------------------------------
 %% Function: %% handle_call(Request, From, State) -> {reply, Reply, State} |
 %%                                      {reply, Reply, State, Timeout} |
@@ -209,11 +210,12 @@ result(_Model, false) ->   % soap notify !
 result(_Model, Error) ->
     srv_error(io_lib:format("Error processing message: ~p", [Error])).
 
-return(#wsdl{model = Model}, ResHeader, ResBody, ResCode, SessVal, Files) ->
-    return(Model, ResHeader, ResBody, ResCode, SessVal, Files);
-return(Model, ResHeader, ResBody, ResCode, SessVal, Files) when not is_list(ResBody) ->
-    return(Model, ResHeader, [ResBody], ResCode, SessVal, Files);
-return(Model, ResHeader, ResBody, ResCode, SessVal, Files) ->
+return(#wsdl{model = Model}, ResHeader, ResBody, ResCode, SessVal, undefined) ->
+    return(Model, ResHeader, ResBody, ResCode, SessVal, undefined);
+return(Model, ResHeader, ResBody, ResCode, SessVal, undefined)
+  when not is_list(ResBody) ->
+    return(Model, ResHeader, [ResBody], ResCode, SessVal, undefined);
+return(Model, ResHeader, ResBody, ResCode, SessVal, undefined) ->
     %% add envelope
     Header2 = case ResHeader of
                   undefined -> undefined;
@@ -223,13 +225,7 @@ return(Model, ResHeader, ResBody, ResCode, SessVal, Files) ->
                                 'Header' = Header2},
     case catch erlsom:write(Envelope, Model) of
         {ok, XmlDoc} ->
-	    case Files of
-		undefined ->
-		    {ok, XmlDoc, ResCode, SessVal};
-		_ ->
-		    DIME = yaws_dime:encode(XmlDoc, Files),
-		    {ok, DIME, ResCode, SessVal}
-	    end;
+            {ok, XmlDoc, ResCode, SessVal};
         {error, WriteError} ->
             srv_error(f("Error writing XML: ~p", [WriteError]));
         OtherWriteError ->
